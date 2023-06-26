@@ -20,8 +20,4 @@ public class File {
 
     private Long size;
 
-    public File() {
-
-    }
-
 }

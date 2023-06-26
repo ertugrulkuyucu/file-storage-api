@@ -1,71 +1,89 @@
 package com.example.filestorage.filestorageapi.controller;
 
 import com.example.filestorage.filestorageapi.model.File;
+import com.example.filestorage.filestorageapi.service.FileService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/files")
 public class FileController {
 
-    private static String UPLOAD_DIR = "uploads/";
-    private static List<String> ALLOWED_EXTENSIONS = Arrays.asList("png", "jpeg", "jpg", "docx", "pdf", "xlsx");
-    private static long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    @Autowired
+    private FileService fileService;
 
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
-        try {
-            // check file size
-            if (file.getSize() > MAX_FILE_SIZE) {
-                return new ResponseEntity<>("File size must be less than 5MB", HttpStatus.BAD_REQUEST);
-            }
 
-            // check file extension
-            String fileExtension = file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf(".") + 1);
-            if (!ALLOWED_EXTENSIONS.contains(fileExtension)) {
-                return new ResponseEntity<>("Invalid file type. Allowed types are: png, jpeg, jpg, docx, pdf, xlsx", HttpStatus.BAD_REQUEST);
-            }
+        return fileService.uploadFile(file);
 
-            Path filePath = Paths.get(UPLOAD_DIR + file.getOriginalFilename());
-            Files.write(filePath, file.getBytes());
-
-            // save file details to the database
-            File fileDetails = new File();
-            fileDetails.setName(file.getOriginalFilename());
-            fileDetails.setExtension(fileExtension);
-            fileDetails.setPath(filePath.toString());
-            fileDetails.setSize(file.getSize());
-
-
-
-
-            return new ResponseEntity<>("File uploaded successfully", HttpStatus.OK);
-        } catch (IOException e) {
-            return new ResponseEntity<>("File upload failed", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
     }
 
 
-    @GetMapping("/download/{fileName}")
-    public ResponseEntity<?> downloadFile(@PathVariable String fileName) {
-        try {
-            Path filePath = Paths.get(UPLOAD_DIR + fileName);
-            byte[] fileBytes = Files.readAllBytes(filePath);
+    @GetMapping("/downloadFileById/{fileId}")
+    public ResponseEntity<?> downloadFileById(@PathVariable Long fileId) {
 
-            // return file bytes
+            return fileService.downloadFile(fileId);
 
-            return ResponseEntity.ok(fileBytes);
-        } catch (IOException e) {
-            return new ResponseEntity<>("File download failed", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
     }
+
+    @GetMapping("/getFileInformationById/{fileId}")
+    public ResponseEntity<?> getFileInformationById(@PathVariable Long fileId) {
+
+            File file = fileService.getFileById(fileId);
+
+            if (file == null) {
+                return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
+            }
+
+            return new ResponseEntity<>(file, HttpStatus.OK);
+
+    }
+
+    @GetMapping("/getFileInformationByName/{fileName}")
+    public ResponseEntity<?> getFileInformationByName(@PathVariable String fileName) {
+
+            File file = fileService.getFileByName(fileName);
+
+            if (file == null) {
+                return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
+            }
+
+            return new ResponseEntity<>(file, HttpStatus.OK);
+
+    }
+
+    @GetMapping("/getAllFileInformation")
+    public ResponseEntity<?> getAllFileInformation() {
+
+            List<File> files = fileService.getAllFiles();
+
+            if (files.isEmpty()) {
+                return new ResponseEntity<>("No files found", HttpStatus.NOT_FOUND);
+            }
+
+            return new ResponseEntity<>(files, HttpStatus.OK);
+
+    }
+
+    @DeleteMapping("/deleteFileById/{fileId}")
+    public ResponseEntity<?> deleteFileById(@PathVariable Long fileId) {
+
+            File file = fileService.getFileById(fileId);
+
+            if (file == null) {
+                return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
+            }
+
+            fileService.deleteFile(file);
+
+            return new ResponseEntity<>("File deleted successfully", HttpStatus.OK);
+
+    }
+
 }
