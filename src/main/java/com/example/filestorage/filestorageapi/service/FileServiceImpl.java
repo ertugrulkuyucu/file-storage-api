@@ -15,6 +15,7 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.logging.Logger;
 
 @Service
@@ -31,6 +32,27 @@ public class FileServiceImpl implements FileService {
     @Override
     public ResponseEntity<?> uploadFile(MultipartFile file) {
 
+        Path filePath = Paths.get(UPLOAD_DIR + file.getOriginalFilename());
+        String fileExtension = Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1);
+
+        uploadFileToDisc(file);
+
+        // save file details to the database
+        File fileDetails = new File();
+        fileDetails.setName(file.getOriginalFilename());
+        fileDetails.setExtension(fileExtension);
+        fileDetails.setPath(filePath.toString());
+        fileDetails.setSize(file.getSize());
+        fileDetails.setSizeUnit("bytes");
+
+        fileRepository.save(fileDetails);
+
+        return new ResponseEntity<>("File uploaded successfully", HttpStatus.OK);
+
+    }
+
+    @Override
+    public ResponseEntity<?> uploadFileToDisc (MultipartFile file) {
         try {
             folderChecker();
 
@@ -48,33 +70,60 @@ public class FileServiceImpl implements FileService {
             Path filePath = Paths.get(UPLOAD_DIR + file.getOriginalFilename());
             Files.write(filePath, file.getBytes());
 
-
-            // save file details to the database
-            File fileDetails = new File();
-            fileDetails.setName(file.getOriginalFilename());
-            fileDetails.setExtension(fileExtension);
-            fileDetails.setPath(filePath.toString());
-            fileDetails.setSize(file.getSize());
-
-            fileRepository.save(fileDetails);
-
             return new ResponseEntity<>("File uploaded successfully", HttpStatus.OK);
-
         } catch (IOException e) {
             return new ResponseEntity<>("File upload failed", HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
+
 
     @Override
     public void deleteFile(File file) {
+
+        String fileName = file.getName();
+
+        deleteFileFromDisc(fileName);
 
         fileRepository.delete(file);
 
     }
 
     @Override
-    public void updateFile() {
+    public void deleteFileFromDisc(String fileName){
+        Path filePath = Paths.get(UPLOAD_DIR + fileName);
+
+        try {
+            Files.delete(filePath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void updateFile(MultipartFile file, Long id) {
+
+        deleteFileFromDisc(file.getName());
+
+        uploadFileToDisc(file);
+
+        File fileToUpdate = fileRepository.findById(id).get();
+
+        Path filePath = Paths.get(UPLOAD_DIR + file.getOriginalFilename());
+        String fileExtension = Objects.requireNonNull(file.getOriginalFilename()).substring(file.getOriginalFilename().lastIndexOf(".") + 1);
+
+        fileToUpdate.setName(file.getOriginalFilename());
+        fileToUpdate.setExtension(fileExtension);
+        fileToUpdate.setPath(filePath.toString());
+        fileToUpdate.setSize(file.getSize());
+        fileToUpdate.setSizeUnit("bytes");
+
+        fileRepository.save(fileToUpdate);
+
+
+
+
+
+
 
     }
 
@@ -83,10 +132,6 @@ public class FileServiceImpl implements FileService {
         return fileRepository.findAll();
     }
 
-    @Override
-    public File getFileByName(String name) {
-        return  fileRepository.findByName(name);
-    }
 
     @Override
     public File getFileById(Long id) {
@@ -100,7 +145,11 @@ public class FileServiceImpl implements FileService {
     public ResponseEntity<?> downloadFile(Long id) {
         try {
 
-            String fileName = fileRepository.findById(id).get().getName();
+            Optional<File> file = fileRepository.findById(id);
+            if (file.isEmpty()) {
+                return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
+            }
+            String fileName = file.get().getName();
 
             Path filePath = Paths.get(UPLOAD_DIR + fileName);
             byte[] fileBytes = Files.readAllBytes(filePath);
@@ -119,7 +168,7 @@ public class FileServiceImpl implements FileService {
         java.io.File folder = new java.io.File(UPLOAD_DIR);
 
         if (!folder.exists()) {
-            boolean created = folder.mkdirs(); // Creates the folder
+            boolean created = folder.mkdirs();
             if (created) {
                 Logger.getAnonymousLogger().info("Folder created: " + folder.getAbsolutePath());
             } else {

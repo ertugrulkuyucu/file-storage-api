@@ -45,19 +45,6 @@ public class FileController {
 
     }
 
-    @GetMapping("/getFileInformationByName/{fileName}")
-    public ResponseEntity<?> getFileInformationByName(@PathVariable String fileName) {
-
-            File file = fileService.getFileByName(fileName);
-
-            if (file == null) {
-                return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
-            }
-
-            return new ResponseEntity<>(file, HttpStatus.OK);
-
-    }
-
     @GetMapping("/getAllFileInformation")
     public ResponseEntity<?> getAllFileInformation() {
 
@@ -83,6 +70,21 @@ public class FileController {
             fileService.deleteFile(file);
 
             return new ResponseEntity<>("File deleted successfully", HttpStatus.OK);
+
+    }
+
+    @PutMapping("/updateFileById/{fileId}")
+    public ResponseEntity<?> updateFileById(@PathVariable Long fileId, @RequestParam("file") MultipartFile file) {
+
+            File fileToUpdate = fileService.getFileById(fileId);
+
+            if (fileToUpdate == null) {
+                return new ResponseEntity<>("File not found", HttpStatus.NOT_FOUND);
+            }
+
+            fileService.updateFile(file, fileId);
+
+            return new ResponseEntity<>("File updated successfully", HttpStatus.OK);
 
     }
 

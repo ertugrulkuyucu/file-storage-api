@@ -20,4 +20,6 @@ public class File {
 
     private Long size;
 
+    private String sizeUnit;
+
 }

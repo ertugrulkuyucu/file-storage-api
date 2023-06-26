@@ -3,23 +3,24 @@ package com.example.filestorage.filestorageapi.service;
 import com.example.filestorage.filestorageapi.model.File;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 
 public interface FileService {
 
-    public ResponseEntity<?> uploadFile(MultipartFile file);
+    ResponseEntity<?> uploadFile(MultipartFile file);
 
-    public void deleteFile(File file);
+    ResponseEntity<?> uploadFileToDisc(MultipartFile file);
 
-    public void updateFile();
+    void deleteFile(File file);
 
-    public List<File> getAllFiles();
+    void deleteFileFromDisc(String fileName);
 
-    public File getFileByName(String name);
+    void updateFile(MultipartFile file, Long id);
 
-    public File getFileById(Long id);
+    List<File> getAllFiles();
 
-    public ResponseEntity<?> downloadFile(Long id);
+    File getFileById(Long id);
+
+    ResponseEntity<?> downloadFile(Long id);
 
 }
